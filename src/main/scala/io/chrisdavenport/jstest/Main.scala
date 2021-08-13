@@ -1,22 +1,29 @@
 package io.chrisdavenport.jstest
 
 import cats.effect._
+import cats.effect.unsafe.implicits._
 import org.http4s._
 import org.http4s.implicits._
-import org.http4s.ember.server.EmberServerBuilder
+import org.http4s.node.serverless.ServerlessApp
 
-object Main extends IOApp {
+import scala.scalajs.js
+import scala.scalajs.js.annotation.JSImport
 
-  def run(args: List[String]): IO[ExitCode] = {
-    EmberServerBuilder.default[IO].withHttpApp(app).build.use(_ => IO.never).as(ExitCode.Success)
-  }
+object Main {
+
+  @JSImport("serverless-http", JSImport.Namespace)
+  @js.native
+  val awsLambdaAdapter: js.Function1[js.Any, js.Any] = js.native
+
+  def main(args: Array[String]): Unit =
+    js.Dynamic.global.exports.lambdaHandler = awsLambdaAdapter(ServerlessApp.unsafeExportApp(app))
 
   def app = {
     import org.http4s.dsl.io._
     HttpRoutes.of[IO]{
-      case GET -> Root / "foo" => Ok()
-      case GET -> Root / "bar" => Accepted()
-      case GET -> Root / "bad" => Forbidden()
+      case GET -> Root / "hello" / "foo" => Ok()
+      case GET -> Root / "hello" / "bar" => Accepted()
+      case GET -> Root / "hello" / "bad" => Forbidden()
     }.orNotFound
   }
 
